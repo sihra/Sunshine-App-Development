@@ -15,9 +15,17 @@
  */
 package com.example.android.sunshine;
 
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
+
+import com.example.android.sunshine.data.SunshinePreferences;
+import com.example.android.sunshine.utilities.NetworkUtils;
+import com.example.android.sunshine.utilities.OpenWeatherJsonUtils;
+
+import java.io.IOException;
+import java.net.URL;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -34,16 +42,53 @@ public class MainActivity extends AppCompatActivity {
          */
         mWeatherTextView = (TextView) findViewById(R.id.tv_weather_data);
 
-
-
-        // TODO (9) Call loadWeatherData to perform the network request to get the weather
+        // Performs network request to get data from website and display on screen
+        loadWeatherData();
     }
 
-    // TODO (8) Create a method that will get the user's preferred location and execute your new AsyncTask and call it loadWeatherData
+    private void loadWeatherData(){
+        String location = SunshinePreferences.getPreferredWeatherLocation(this);
+        new FetchWeatherAsyncTask().execute(location);
+    }
 
-    // TODO (5) Create a class that extends AsyncTask to perform network requests
+    /**
+     * Class that gets the weather based off the user's location
+     */
+    public class FetchWeatherAsyncTask extends AsyncTask<String, Void, String[] >{
 
+        /**
+         * Method that carries out getting the weather
+         */
+        protected String[] doInBackground(String... params) {
+            // If the user doesn't have a zip code, there's nothing to return
+            if(params.length == 0){
+                return null;
+            }
+            String location = params[0];
+            URL compileWeather = NetworkUtils.buildUrl(location);
 
-    // TODO (6) Override the doInBackground method to perform your network requests
-    // TODO (7) Override the onPostExecute method to display the results of the network request
+            try{
+                String jsonPullWeather = NetworkUtils.getResponseFromHttpUrl(compileWeather);
+
+                String[] jsonWeatherData = OpenWeatherJsonUtils.getSimpleWeatherStringsFromJson(MainActivity.this, jsonPullWeather);
+
+                return jsonWeatherData;
+            }catch(Exception e){
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+        /**
+         * Method that displays the results of the network requests onto the screen to showcase weather data from the user's location
+         * @param s : compilation of data
+         */
+        protected void onPostExecute(String[] s) {
+            if (s != null) {
+                for (String weatherString : s) {
+                    mWeatherTextView.append((weatherString) + "\n\n\n");
+                }
+            }
+        }
+    }
 }
